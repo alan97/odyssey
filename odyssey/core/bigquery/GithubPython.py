@@ -15,8 +15,8 @@ memory = Memory(cachedir=".",verbose=0)
 class GithubPython:
 	"""Provides functionality to build SQL query, connect with BigQuery, etc."""
 
-	PY_FILE_UNIQUE = "[scikit-learn-research.pyfiles.content_py_unique]" 
-	PY_FILE_ALL = "[scikit-learn-research.pyfiles.content_py_full]"
+	PY_FILE_UNIQUE = '`Odyssey_github_sklearn.content_py_unique`'
+	PY_FILE_ALL = '`Odyssey_github_sklearn.content_py_full`'
 
 	def __init__(self, package="", exclude_forks="auto", limit=None):
 		"""Initialize the GithubPython object.
@@ -368,7 +368,7 @@ class GithubPython:
 		"""
 		self.limit = limit
 
-	def run(self, query, project="stellar-arcadia-173703"):
+	def run(self, query, project="odyssey-193217"):
 		"""Run SQL query with Google BigQuery. Allow large results. Timeout set to 99999999.
 		
 		Parameters
@@ -376,7 +376,7 @@ class GithubPython:
 		query: string
 			SQL query to be executed.
 
-		project: string, optional (default="stellar-arcadia-173703")
+		project: string, optional (default="odyssey-193217")
 			Project to run the query on (for billing, logging, etc. purpose)
 
 		Returns
@@ -386,12 +386,12 @@ class GithubPython:
 
 		"""
 		from google.cloud import bigquery
+		job_config = bigquery.QueryJobConfig()
 		client = bigquery.Client(project=project)
-		result = client.run_sync_query(query)
-		result.allow_large_results = True
-		result.timeout_ms = 99999999
-		result.run()
-		return list(result.fetch_data())
+		result = client.query(query,job_config=job_config)
+		job_config.allowLargeResults = True
+		result.__done_timeout = 99999999
+		return list(result)
 
 	def _get_query(self, select, _filter=None):
 		where_clause = ""
@@ -408,7 +408,7 @@ class GithubPython:
 		if self.limit:
 			limit_clause = "LIMIT %s" % self.limit
 
-		query = """\
+		query = """
 		SELECT
 			%s
 		FROM
@@ -425,7 +425,7 @@ class GithubPython:
 		return self._get_query("count(*)", _filter)
 
 	def _contains_package_string(self):
-		return 'content CONTAINS "%s"' % self.package
+		return 'REGEXP_CONTAINS(content,"%s")' % self.package
 
 	def _contains_package_string_standard_sql(self):
 		return "NOT(STRPOS(content, '%s') = 0)" % self.package
@@ -443,21 +443,20 @@ class GithubPython:
 		
 		string_builder = []
 		for keyword in exclude_list:
-			string_builder.append('path CONTAINS "%s"' % keyword)
-			string_builder.append('repo_name CONTAINS "%s"' % keyword)
+			string_builder.append('REGEXP_CONTAINS(path,"%s")' % keyword)
+			string_builder.append('REGEXP_CONTAINS(repo_name,"%s")' % keyword)
 
-		all_forks = """\
-		SELECT
-			UNIQUE(repo_name)
+		all_forks = '''
+		SELECT DISTINCT(repo_name)
+	
 		FROM
 			%s
 		WHERE
 			%s
-		""" % (GithubPython.PY_FILE_ALL, connect_with_or(*string_builder))
+		''' % (GithubPython.PY_FILE_ALL, connect_with_or(*string_builder))
 
 		res = self.run(all_forks)
-		excluded_repos = ['NOT repo_name CONTAINS "%s"' % repo_name[0]
-			for repo_name in res]
+		excluded_repos =[ 'NOT REGEXP_CONTAINS(repo_name, "%s")' % repo_name[0]  for repo_name in res ]
 		return excluded_repos
 
 	def _exclude_forks_string_list_standard_sql(self):
@@ -473,17 +472,17 @@ class GithubPython:
 		
 		string_builder = []
 		for keyword in exclude_list:
-			string_builder.append('path CONTAINS "%s"' % keyword)
-			string_builder.append('repo_name CONTAINS "%s"' % keyword)
+			string_builder.append('REGEXP_CONTAINS(path,"%s")' % keyword)
+			string_builder.append('REGEXP_CONTAINS(repo_name,"%s")' % keyword)
 
-		all_forks = """\
+		all_forks = '''
 		SELECT
-			UNIQUE(repo_name)
+			DISTINCT(repo_name)
 		FROM
 			%s
 		WHERE
 			%s
-		""" % (GithubPython.PY_FILE_ALL, connect_with_or(*string_builder))
+		''' % (GithubPython.PY_FILE_ALL, connect_with_or(*string_builder))
 
 		res = self.run(all_forks)
 		excluded_repos = ["STRPOS(repo_name, '%s') = 0" % repo_name[0]
@@ -531,7 +530,7 @@ class GithubPython:
 		limit_clause = ""
 		if self.limit:
 			limit_clause = "LIMIT %s" % self.limit
-		query = '''\
+		query = '''
 		#standardSQL
 		CREATE TEMPORARY FUNCTION parsePythonFile(a STRING)
 		RETURNS STRING
@@ -567,7 +566,7 @@ class GithubPython:
 		parsePythonFile2(content,repo_name) repo_name,
 		count(*) count
 		FROM   
-		`scikit-learn-research.pyfiles.content_py_unique` 
+		`Odyssey_github_sklearn.content_py_unique` 
 		WHERE
 		 %s
 		GROUP BY

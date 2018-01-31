@@ -20,9 +20,9 @@ To install, first clone the repository and run setup.py file:
 
 .. code-block::
 
-    $ git clone https://github.com/alan97/odyssey.git
+    $ git clone https://github.com/aishgrt1/odyssey
     $ cd odyssey
-    $ python setup.py
+    $ python setup.py install
 
 Documentation and Tutorial
 --------------------------
